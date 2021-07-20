@@ -2,6 +2,7 @@ import Router from 'next/dist/client/router';
 import { FormEvent, useState } from 'react';
 import { useAuthentication } from '../context/AuthContext';
 import styles from '../styles/Home.module.css';
+import { withSSRGuest } from '../utils/withSSRGuest';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -19,7 +20,6 @@ export default function Home() {
     await signIn(data);
 
     if (isAuthenticated) {
-      console.log(isAuthenticated);
       Router.push('/dashboard');
     }
   }
@@ -42,3 +42,7 @@ export default function Home() {
     </form>
   );
 }
+//  Hight order Function
+export const getServerSideProps = withSSRGuest(async (ctx) => {
+  return { props: {} };
+});
