@@ -1,17 +1,44 @@
+import jwtDecode from 'jwt-decode';
 import { GetServerSideProps, GetServerSidePropsContext, GetServerSidePropsResult } from 'next';
 import { destroyCookie, parseCookies } from 'nookies';
 import { AuthTokenError } from '../services/errors/AuthTokenError';
+import { validateUserPermissions } from './validateUserPermissions';
 
-export function withSSRAuth<P>(fn: GetServerSideProps<P>) {
+type WithSSRAuthOptions = {
+  permissions?: string[];
+  roles?: string[];
+};
+
+export function withSSRAuth<P>(fn: GetServerSideProps<P>, options?: WithSSRAuthOptions) {
   return async (ctx: GetServerSidePropsContext): Promise<GetServerSidePropsResult<P>> => {
     const cookies = parseCookies(ctx);
-    if (!cookies['nextAuth.token']) {
+
+    const token = cookies['nextAuth.token'];
+
+    if (!token) {
       return {
         redirect: {
           destination: '/',
           permanent: false,
         },
       };
+    }
+
+    if (options) {
+      const user = jwtDecode<{ permissions: string[]; roles: string[] }>(token);
+
+      const { permissions, roles } = options;
+
+      const userHasValidPermissions = validateUserPermissions({ user, permissions, roles });
+
+      if (!userHasValidPermissions) {
+        return {
+          redirect: {
+            destination: '/dashboard',
+            permanent: false,
+          },
+        };
+      }
     }
 
     //  capturando erros de autenticação que não seja de refresh token, e deslogando o usuario pelo servidor
